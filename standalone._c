@@ -1,0 +1,52 @@
+/* La Fortuna Scrolling Test */
+
+
+#include <avr/io.h>
+#include <util/delay.h>
+#include <avr/interrupt.h>
+#include "lcd.h"
+#include "ruota.h"
+#include "keyboard.h"
+
+void main(void)
+{
+    init();
+
+    char array[54];
+    volatile uint8_t flag = 0;
+
+    os_open_keyboard(array, &flag);
+
+    sei(); /* Turn on Global Interrupts */
+     for (;;) {
+        scan_encoder();
+        scan_switches();
+        int8_t value = os_enc_delta();
+        if (value == -1) {
+            /* Left */
+            keyboard_rotary_left();
+        } else if (value == 1) {
+            /* Right */
+            keyboard_rotary_right();
+        } else if (get_switch_press(_BV(SWC))) {
+            keyboard_centre_button();
+        }
+        if (flag) {
+            flag = 0;
+            display_string(array);
+            display_string("\nDone");
+        }
+    }
+}
+
+
+void init(void)
+{
+    /* 8MHz clock, no prescaling (DS, p. 48) */
+    CLKPR = (1 << CLKPCE);
+    CLKPR = 0;
+
+    init_lcd();
+
+    os_init_ruota();
+}
